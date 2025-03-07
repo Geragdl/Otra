@@ -1,68 +1,199 @@
-# Nombre descriptivo del flujo de trabajo
-name: Gestor de Clientes
+"""
+Este programa permite gestionar clientes y sus servicios contratados.
+"""
 
-# Eventos que disparan este flujo de trabajo
-on:
-  # Se ejecuta cuando alguien hace push al repositorio
-  push:
-    branches: [ main ]
-  # Se ejecuta cuando alguien crea una pull request
-  pull_request:
-    branches: [ main ]
-  # Permite ejecutar manualmente desde la interfaz de GitHub
-  workflow_dispatch:
+# Importación de bibliotecas necesarias
+import os                 # Para operaciones con archivos y directorios
+import datetime           # Para obtener la fecha actual
+import sys                # Para acceder a los argumentos de línea de comandos
 
-# Trabajos que ejecutará este flujo de trabajo
-jobs:
-  # Nombre del trabajo
-  test:
-    # Sistema operativo donde se ejecutará
-    runs-on: ubuntu-latest
+# Función para crear la carpeta de clientes si no existe
+def inicializar_directorio():
+    """Crea el directorio 'clientes' si no existe."""
+    if not os.path.exists('clientes'):
+        os.makedirs('clientes')
+    return True
+
+# Función para mostrar el menú principal
+def mostrar_menu():
+    """Muestra el menú principal y devuelve la opción elegida."""
+    print("\n=== GESTOR DE CLIENTES SKY ===")
+    print("1. Ver lista de clientes")
+    print("2. Ver cliente")
+    print("3. Crear cliente nuevo")
+    print("4. Agregar servicio")
+    print("5. Salir")
+    print("=============================")
+    return input("Elija una opción: ")
+
+# Función para ver la lista de clientes
+def ver_lista():
+    """Muestra la lista de todos los clientes existentes."""
+    print("\nCLIENTES:")
+    archivos = os.listdir('clientes')
+    if len(archivos) == 0:
+        print("No hay clientes")
+    else:
+        for archivo in archivos:
+            # Muestra el nombre sin la extensión .txt
+            nombre = archivo.replace('.txt', '')
+            print(f"- {nombre}")
+    return True
+
+# Función para ver información de un cliente específico
+def ver_cliente(nombre=None):
+    """
+    Muestra la información de un cliente específico.
     
-    # Pasos a ejecutar en secuencia
-    steps:
-    # Paso 1: Obtener una copia del código del repositorio
-    - name: Obtener código del repositorio
-      uses: actions/checkout@v3
+    Args:
+        nombre (str, opcional): Nombre del cliente a consultar.
+                               Si es None, lo solicitará al usuario.
     
-    # Paso 2: Verificar la estructura de archivos (útil para depuración)
-    - name: Listar archivos del repositorio
-      run: |
-        echo "Listando archivos en el directorio actual:"
-        ls -la
+    Returns:
+        bool: True si el cliente existe, False si no existe.
+    """
+    if nombre is None:
+        nombre = input("\nNombre del cliente: ")
     
-    # Paso 3: Configurar Python en el ambiente de ejecución
-    - name: Configurar Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'  # Versión de Python a usar
+    ruta = f"clientes/{nombre}.txt"
+
+    if os.path.exists(ruta):
+        with open(ruta, 'r') as archivo:
+            contenido = archivo.read()
+        print("\nINFORMACIÓN DEL CLIENTE:")
+        print(contenido)
+        return True
+    else:
+        print(f"Cliente '{nombre}' no existe")
+        return False
+
+# Función para crear un nuevo cliente
+def crear_cliente(nombre=None, direccion=None, telefono=None, servicio=None):
+    """
+    Crea un nuevo cliente con su información básica.
     
-    # Paso 4: Ejecutar la función de listar clientes (primera prueba)
-    - name: Probar listado de clientes
-      run: |
-        python gestor_clientes.py listar
+    Args:
+        nombre (str, opcional): Nombre del cliente.
+        direccion (str, opcional): Dirección del cliente.
+        telefono (str, opcional): Teléfono del cliente.
+        servicio (str, opcional): Primer servicio contratado.
+        
+    Returns:
+        bool: True si se creó correctamente, False si ya existía.
+    """
+    if nombre is None:
+        nombre = input("\nNombre del cliente nuevo: ")
     
-    # Paso 5: Crear un cliente de prueba
-    - name: Crear cliente de prueba
-      run: |
-        python gestor_clientes.py crear "ClientePrueba" "Av. Ejemplo 123" "555-1234" "TV Básico"
+    ruta = f"clientes/{nombre}.txt"
+
+    if os.path.exists(ruta):
+        print(f"Este cliente '{nombre}' ya existe")
+        return False
+
+    if direccion is None:
+        direccion = input("Dirección: ")
     
-    # Paso 6: Verificar que el cliente se creó correctamente
-    - name: Verificar cliente creado
-      run: |
-        python gestor_clientes.py ver "ClientePrueba"
+    if telefono is None:
+        telefono = input("Teléfono: ")
     
-    # Paso 7: Agregar un servicio adicional al cliente
-    - name: Agregar servicio al cliente
-      run: |
-        python gestor_clientes.py agregar "ClientePrueba" "Internet 100MB"
+    if servicio is None:
+        servicio = input("Servicio: ")
     
-    # Paso 8: Verificar que el servicio se agregó correctamente
-    - name: Verificar servicio agregado
-      run: |
-        python gestor_clientes.py ver "ClientePrueba"
+    fecha = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    with open(ruta, 'w') as archivo:
+        archivo.write(f"Nombre: {nombre}\n")
+        archivo.write(f"Dirección: {direccion}\n")
+        archivo.write(f"Teléfono: {telefono}\n")
+        archivo.write(f"Fecha registro: {fecha}\n\n")
+        archivo.write(f"SERVICIOS:\n")
+        archivo.write(f"- {servicio} ({fecha})\n")
+
+    print(f"Cliente '{nombre}' creado correctamente")
+    return True
+
+# Función para agregar un servicio a un cliente existente
+def agregar_servicio(nombre=None, servicio=None):
+    """
+    Agrega un nuevo servicio a un cliente existente.
     
-    # Paso 9: Listar clientes nuevamente para ver el cliente añadido
-    - name: Listar clientes actualizados
-      run: |
-        python gestor_clientes.py listar
+    Args:
+        nombre (str, opcional): Nombre del cliente.
+        servicio (str, opcional): Servicio a agregar.
+        
+    Returns:
+        bool: True si se agregó correctamente, False si el cliente no existe.
+    """
+    if nombre is None:
+        nombre = input("\nNombre del cliente: ")
+    
+    ruta = f"clientes/{nombre}.txt"
+
+    if os.path.exists(ruta):
+        if servicio is None:
+            servicio = input("Nuevo servicio: ")
+        
+        fecha = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        with open(ruta, 'a') as archivo:
+            archivo.write(f"- {servicio} ({fecha})\n")
+
+        print(f"Servicio '{servicio}' agregado correctamente a '{nombre}'")
+        return True
+    else:
+        print(f"Cliente '{nombre}' no existe")
+        return False
+
+# Función principal
+def main():
+    """
+    Función principal que maneja tanto el modo interactivo como el modo de línea de comandos.
+    """
+    inicializar_directorio()
+    
+    if len(sys.argv) > 1:
+        comando = sys.argv[1]
+        
+        if comando == "listar":
+            return ver_lista()
+        
+        elif comando == "ver" and len(sys.argv) > 2:
+            return ver_cliente(sys.argv[2])
+        
+        elif comando == "crear" and len(sys.argv) > 5:
+            return crear_cliente(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+        
+        elif comando == "agregar" and len(sys.argv) > 3:
+            return agregar_servicio(sys.argv[2], sys.argv[3])
+        
+        else:
+            print("Uso del programa en línea de comandos:")
+            print("  python gestor_clientes.py listar")
+            print("  python gestor_clientes.py ver <nombre>")
+            print("  python gestor_clientes.py crear <nombre> <direccion> <telefono> <servicio>")
+            print("  python gestor_clientes.py agregar <nombre> <servicio>")
+            return False
+    
+    else:
+        while True:
+            opcion = mostrar_menu()
+
+            if opcion == "1":
+                ver_lista()
+            elif opcion == "2":
+                ver_cliente()
+            elif opcion == "3":
+                crear_cliente()
+            elif opcion == "4":
+                agregar_servicio()
+            elif opcion == "5":
+                print("Adiós")
+                break
+            else:
+                print("Opción no válida")
+        
+        return True
+
+# Ejecutar la función principal si el script es ejecutado directamente
+if __name__ == "__main__":
+    main()
